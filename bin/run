@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# This script is taking care to bootstrap the database before to run the
+# application.
+#
+
+# Update the ViMbAdmin configuration file
+APPLICATION_CONF_PATH="$APPLICATION_PATH/config.inc.php"
+
+export DOMAIN_NAME=`hostname --domain`
+export FQDN=`hostname --fqdn`
+
+# Default value for the SETUP_PASSWORD
+[[ -z $SETUP_PASSWORD ]] && SETUP_PASSWORD="changeme"
+
+sed -i 's/__DB_HOST__/'$MYSQL_PORT_3306_TCP_ADDR'/'     $APPLICATION_CONF_PATH
+sed -i 's/__MYSQL_DB_NAME__/'$MYSQL_DB_NAME'/'          $APPLICATION_CONF_PATH
+sed -i 's/__MYSQL_DB_USERNAME__/'$MYSQL_DB_USERNAME'/'  $APPLICATION_CONF_PATH
+sed -i 's/__MYSQL_DB_PASSWORD__/'$MYSQL_DB_PASSWORD'/'  $APPLICATION_CONF_PATH
+sed -i 's/__SETUP_PASSWORD__/'$SETUP_PASSWORD'/'        $APPLICATION_CONF_PATH
+sed -i 's/__DOMAIN_NAME__/'$DOMAIN_NAME'/'              $APPLICATION_CONF_PATH
+sed -i 's/__FQDN__/'$FQDN'/'                            $APPLICATION_CONF_PATH
+
+# Postfix.admin documentation extract:
+#
+# // Specify '' for Dovecot and 'INBOX.' for Courier.
+MAILBOX_SUBDIR_PREFIX=''
+[[ $WITH_COURIER == 'yes' ]] && MAILBOX_SUBDIR_PREFIX='INBOX.'
+sed -i 's/__MAILBOX_SUBDIR_PREFIX__/'$MAILBOX_SUBDIR_PREFIX'/'  $APPLICATION_CONF_PATH
+
+cd $APPLICATION_PATH/
+
+# Create the database and the user if doesn't exist
+if ! mysql -s -h $MYSQL_PORT_3306_TCP_ADDR -p$MYSQL_ROOT_PASSWORD -u root -e "use $MYSQL_DB_NAME"; then
+  echo "Creating the $MYSQL_DB_NAME database on server $MYSQL_PORT_3306_TCP_ADDR ..."
+  Q1="CREATE DATABASE $MYSQL_DB_NAME;"
+  Q2="GRANT ALL ON *.* TO '$MYSQL_DB_USERNAME'@'%' IDENTIFIED BY '$MYSQL_DB_PASSWORD';"
+  Q3="FLUSH PRIVILEGES;"
+  SQL="${Q1}${Q2}${Q3}"
+  mysql -s -h $MYSQL_PORT_3306_TCP_ADDR -p$MYSQL_ROOT_PASSWORD -u root -e "$SQL"
+fi
+
+# Starting PHP and Nginx
+nginx-start
