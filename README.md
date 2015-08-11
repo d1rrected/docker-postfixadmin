@@ -1,7 +1,8 @@
 # Postfix.Admin docker image
 
 This repository contains a docker image for
-[Postfixadmin](http://postfixadmin.sourceforge.net/).
+[Postfixadmin](http://postfixadmin.sourceforge.net/) that you can download
+from [Docker Hub](https://hub.docker.com/r/zedtux/postfixadmin/).
 
 # Build the image
 
